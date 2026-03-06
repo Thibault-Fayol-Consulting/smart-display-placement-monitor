@@ -7,9 +7,20 @@
  * License: MIT
  * --------------------------------------------------------------------------
  */
-var CONFIG = { TEST_MODE: true };
+var CONFIG = { TEST_MODE: true, COST_THRESHOLD: 2.0 };
 function main() {
-    Logger.log("Extracting placements from Smart Display Campaigns...");
-    var report = AdsApp.report("SELECT placement_view.placement, metrics.cost_micros FROM placement_view");
-    // Parse URL logic...   
+    Logger.log("Checking AUTOMATIC PLACEMENTS for sneaky bad inventory...");
+    var report = AdsApp.report("SELECT URL, CampaignName, Cost, Conversions FROM AUTOMATIC_PLACEMENTS_PERFORMANCE_REPORT WHERE Cost > " + CONFIG.COST_THRESHOLD + " AND Conversions = 0 DURING LAST_30_DAYS");
+    var rows = report.rows();
+    var suspiciousCount = 0;
+    
+    while(rows.hasNext()) {
+        var row = rows.next();
+        var url = row["URL"];
+        if (url.indexOf("appspot.com") !== -1 || url.indexOf("anonymous.google") !== -1 || url.indexOf(".xyz") !== -1) {
+             Logger.log("Suspicious zero-conv placement spotted: " + url + " in " + row["CampaignName"]);
+             suspiciousCount++;
+        }
+    }
+    Logger.log("Found " + suspiciousCount + " questionable placements to manually exclude at the account level.");
 }
